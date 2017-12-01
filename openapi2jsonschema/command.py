@@ -4,6 +4,7 @@ import json
 import yaml
 import urllib
 import os
+import sys
 
 from jsonref import JsonRef
 import click
@@ -149,6 +150,15 @@ def default(output, schema, prefix, stand_alone, kubernetes, strict):
     info("Generating individual schemas")
     for title in data['definitions']:
         kind = title.split('.')[-1].lower()
+
+        # Right now we are generating only configs we care about
+        # This can be removed once https://github.com/openshift/origin/issues/17168
+        # is fixed. But this also helps us keep the amount of configs generated sane
+        if kind != "deploymentconfigspecmod" and \
+            kind != "jobspecmod" and \
+            kind != "deploymentspecmod":
+            continue
+
         specification = data['definitions'][title]
         specification["$schema"] ="http://json-schema.org/schema#"
         specification["type"] = "object"
@@ -188,6 +198,7 @@ def default(output, schema, prefix, stand_alone, kubernetes, strict):
                 schema_file.write(json.dumps(specification, indent=2))
         except Exception as e:
             error("An error occured processinng %s: %s" % (kind, e))
+            sys.exit(1)
 
 
     with open("%s/all.json" % output, 'w') as all_file:
